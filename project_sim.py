@@ -15,6 +15,7 @@ References:
   https://simpy.readthedocs.io/en/latest/
 """
 import simpy
+import tqdm
 
 
 class Person:
@@ -44,13 +45,15 @@ class Task:
         self.duration = duration
         self.requirements = requirements
         self.started = False
+        self.completed_by = None
 
     def matches(self, agent):
+        num_requirements = len(self.requirements)
         for r in self.requirements:
             for c in agent.capabilities:
                 if r == c:
-                    return True
-        return False
+                    num_requirements = num_requirements - 1
+        return num_requirements == 0
 
 
 class Project:
@@ -73,6 +76,12 @@ class Project:
     def define(self, tasks):
         for t in tasks:
             self.tasks.append(t)
+
+    def get_task(self, name):
+        for t in self.tasks:
+            if t.name == name:
+                return t
+        return None
 
     def simulate(self):
         print(f"Using greedy search to place tasks in agent queues...")
@@ -98,4 +107,5 @@ class Project:
                 print(f"{self.env.now}: {person.name} starting task {task.name}.")
                 # this resource is tied up for the task's duration
                 yield self.env.timeout(task.duration)
+                task.completed_by = person
                 print(f"{self.env.now}: {person.name} finished task {task.name}.")
