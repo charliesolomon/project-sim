@@ -51,9 +51,55 @@ def test_multi_dependency_task():
 
 
 # missing capabilities (graceful project failure)
+def test_no_capabilities_for_task():
+    project = sim.Project("test project")
+
+    project.staff(
+        [
+            sim.Person("charlie", ["coder", "sa"]),
+            sim.Person("louis", ["sa", "leader"]),
+            sim.Person("wing", ["coder", "sa"]),
+        ]
+    )
+
+    project.define(
+        [
+            sim.Task("t1", 10, ["sa", "leader"]),
+            sim.Task("t2", 20, ["underwater basket weaving"]),
+            sim.Task("t3", 5, ["leader"]),
+        ]
+    )
+
+    project.simulate()
+    assert project.get_task("t2").completed_by == None
+
+
+# task dependencies
+def test_task_dependencies():
+    project = sim.Project("test project")
+
+    project.staff(
+        [
+            sim.Person("charlie", ["coder", "leader"]),
+            sim.Person("louis", ["sa", "leader"]),
+            sim.Person("wing", ["leader", "coder", "sa"]),
+        ]
+    )
+
+    project.define(
+        [
+            sim.Task("t1", 5, ["leader"], blocked_by="t3"),
+            sim.Task("t2", 10, ["sa", "leader"]),
+            sim.Task("t3", 20, ["coder"]),
+        ]
+    )
+
+    project.simulate()
+    assert project.get_task("t3").completed_by.name == "charlie"
+
+
+# staff gains capability after project start
 
 # multiple possible assignments
 
 # sub-optimal solution
-
-# task dependencies

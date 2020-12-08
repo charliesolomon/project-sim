@@ -40,12 +40,17 @@ class Task:
     A task takes time to complete.
     """
 
-    def __init__(self, name, duration, requirements):
+    def __init__(self, name, duration, requirements, blocked_by=""):
         self.name = name
         self.duration = duration
         self.requirements = requirements
-        self.started = False
+        self.blocked_by = blocked_by
+        self.started = -1
+        self.completed = -1
         self.completed_by = None
+
+    def finished(self):
+        return self.completed >= 0
 
     def matches(self, agent):
         num_requirements = len(self.requirements)
@@ -83,15 +88,36 @@ class Project:
                 return t
         return None
 
-    def simulate(self):
-        print(f"Using greedy search to place tasks in agent queues...")
+    def blocks(self, task):
+        b = []
         for t in self.tasks:
+            if t.blocked_by == task.name:
+                b.append(t)
+        return b
+
+    def log(self, message):
+        print(message)
+
+    def assign(self, task):
+        if task.started < 0 and (
+            task.blocked_by == "" or self.get_task(task.blocked_by).finished()
+        ):
             for p in self.people:
-                if t.matches(p):
+                if task.matches(p):
                     # place tasks in queues of matching agents
-                    self.env.process(self.use_resource(t, p))
+                    self.env.process(self.use_resource(task, p))
+        else:
+            self.log(f"{self.env.now}: could not assign {task.name}!")
+
+    def simulate(self):
+        self.log(f'\nProject "{self.name}"')
+        for t in self.tasks:
+            self.assign(t)
         self.env.run()
-        print(f"Finished simulation in {self.env.now} time units!")
+        self.log(f"Finished simulation in {self.env.now} time units!")
+        for t in self.tasks:
+            if not t.finished():
+                self.log(f'    FAIL: Task "{t.name}" could not be completed!')
 
     def use_resource(self, task, person):
         # generate a resource request (get in queue)
@@ -99,13 +125,17 @@ class Project:
             # wait in agent's queue...
             yield req
             # resource became available
-            if task.started:
-                # get the task out of this person's queue if the task is already started
+            doTask = False
+            if task.started >= 0:
+                # get the task out of this person's queue (someone else started it already)
                 person.resource.release(req)
             else:
-                task.started = True
-                print(f"{self.env.now}: {person.name} starting task {task.name}.")
+                task.started = self.env.now
+                self.log(f"{self.env.now}: {person.name} starting task {task.name}.")
                 # this resource is tied up for the task's duration
                 yield self.env.timeout(task.duration)
                 task.completed_by = person
-                print(f"{self.env.now}: {person.name} finished task {task.name}.")
+                task.completed = self.env.now
+                self.log(f"{task.completed}: {person.name} finished task {task.name}.")
+                for t in self.blocks(task):
+                    self.assign(t)
