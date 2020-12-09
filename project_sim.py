@@ -108,50 +108,6 @@ class Project:
                 if task.matches(p):
                     # place tasks in queues of matching agents
                     self.env.process(self.use_resource(task, p))
-        else:
-            self.log(f"{self.env.now}: could not assign {task.name}!")
-
-    def simulate(self):
-        self.log(f'\nProject "{self.name}"')
-        for t in self.tasks:
-            self.assign(t)
-        self.env.run()
-        self.log(f"Finished simulation in {self.env.now} time units!")
-
-        # progress bar gantt
-        max_desc = 25
-        max_suffix = 5
-        max_bar = self.env.now
-        for t in self.tasks:
-            if not t.finished():
-                self.log(f'    FAIL: Task "{t.name}" could not be completed!')
-            else:
-                t_desc = t.completed_by.name + " - " + t.name
-                if len(t_desc) > max_desc:
-                    t_desc = t_desc[: (max_desc - 3 - len(t_desc))] + "..."
-                else:
-                    t_desc = t_desc.ljust(max_desc)
-                t_suffix = f"{t.started},{t.completed}"
-                if len(t_suffix) > max_suffix:
-                    t_suffix = t_suffix[: (max_suffix - 3 - len(t_suffix))] + "..."
-                else:
-                    t_suffix = t_suffix.rjust(max_suffix)
-
-                with trange(100) as p:
-                    max_bar_screen = p.ncols - max_desc - max_suffix
-                    p.set_description(f"{t_desc}", False)
-                    t_leader = int((t.started) * max_bar_screen / max_bar)
-                    t_trailer = int((max_bar - t.completed) * max_bar_screen / max_bar)
-                    bf = (
-                        f"{t_desc}"
-                        + " " * t_leader
-                        + "|{bar}|"
-                        + " " * t_trailer
-                        + f"{t_suffix}"
-                    )
-                    p.bar_format = bf
-                    for i in p:
-                        sleep(self.speed)
 
     def use_resource(self, task, person):
         # generate a resource request (get in queue)
@@ -165,11 +121,57 @@ class Project:
                 person.resource.release(req)
             else:
                 task.started = self.env.now
-                self.log(f"{self.env.now}: {person.name} starting task {task.name}.")
+                # self.log(f"{self.env.now}: {person.name} starting task {task.name}.")
                 # this resource is tied up for the task's duration
                 yield self.env.timeout(task.duration)
                 task.completed_by = person
                 task.completed = self.env.now
-                self.log(f"{task.completed}: {person.name} finished task {task.name}.")
+                # self.log(f"{task.completed}: {person.name} finished task {task.name}.")
                 for t in self.blocks(task):
                     self.assign(t)
+
+    def ltrunc(self, str, max):
+        if len(str) > max:
+            return str[: (max - 3 - len(str))] + "..."
+        return str.ljust(max)
+
+    def simulate(self):
+        for t in self.tasks:
+            self.assign(t)
+
+        self.env.run()
+        self.log(f"\n{self.name} - finished in {self.env.now} time units")
+
+        # progress bar gantt
+        max_name = 8
+        max_desc = 10
+        max_time_digits = len(f"{self.env.now}")
+        max_suffix = 1 + 2 * max_time_digits
+        max_bar = self.env.now
+        for t in self.tasks:
+            if not t.finished():
+                self.log(f'FAIL: Task "{t.name}" could not be completed!')
+            else:
+                t_desc = self.ltrunc(t.completed_by.name, max_name) + self.ltrunc(
+                    " - " + t.name, max_desc
+                )
+                t_suffix = (
+                    f"{t.started}".rjust(max_time_digits)
+                    + ","
+                    + f"{t.completed}".rjust(max_time_digits)
+                )
+                with trange(100) as p:
+                    max_bar_screen = p.ncols - max_name - max_desc - max_suffix
+                    p.set_description(f"{t_desc}", False)
+                    t_leader = int((t.started) * max_bar_screen / max_bar)
+                    t_trailer = int((max_bar - t.completed) * max_bar_screen / max_bar)
+                    bf = (
+                        f"{t_desc}"
+                        + " " * t_leader
+                        + "|{bar}|"
+                        + " " * t_trailer
+                        + f"{t_suffix}"
+                    )
+                    p.bar_format = bf
+                    for i in p:
+                        sleep(self.speed)

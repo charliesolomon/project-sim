@@ -13,9 +13,9 @@ project.staff(
 
 project.define(
     [
-        sim.Task("t1 is a long task name yep", 10, ["sa"]),
-        sim.Task("t2", 20, ["coder"]),
-        sim.Task("t3", 5, ["leader"]),
+        sim.Task("t1 is a long task name yep", 109, ["sa"]),
+        sim.Task("t2", 112, ["coder"]),
+        sim.Task("t3", 50, ["leader"]),
     ]
 )
 
