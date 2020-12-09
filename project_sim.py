@@ -14,8 +14,9 @@ References:
   Simulations use the discrete event simulation library "simpy":
   https://simpy.readthedocs.io/en/latest/
 """
+from time import sleep
 import simpy
-import tqdm
+from tqdm import trange, tqdm
 
 
 class Person:
@@ -67,11 +68,12 @@ class Project:
     complete a set of tasks.
     """
 
-    def __init__(self, name):
+    def __init__(self, name, speed=0.000):
         self.env = simpy.Environment()
         self.name = name
         self.people = []
         self.tasks = []
+        self.speed = speed
 
     def staff(self, people):
         for p in people:
@@ -115,7 +117,30 @@ class Project:
             self.assign(t)
         self.env.run()
         self.log(f"Finished simulation in {self.env.now} time units!")
+
+        # progress bar gantt
+        max_desc = 20
+        max_bar = self.env.now
         for t in self.tasks:
+            t_desc = t.name
+            if len(t_desc) >= max_desc:
+                t_desc = t_desc[: (max_desc - 3 - len(t_desc))] + "..."
+            else:
+                t_desc = t_desc.ljust(max_desc)
+            with trange(100) as p:
+                max_bar_screen = p.ncols - max_desc - 7
+                p.set_description(f"{t_desc}", False)
+                bf = (
+                    "{desc:"
+                    + f"<{max_desc}"
+                    + "}|{bar:"
+                    + f"{int(t.completed*max_bar_screen/max_bar)}"
+                    + "}|"
+                    + f"{t.completed}"
+                )
+                p.bar_format = bf
+                for i in p:
+                    sleep(self.speed)
             if not t.finished():
                 self.log(f'    FAIL: Task "{t.name}" could not be completed!')
 

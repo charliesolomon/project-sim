@@ -2,7 +2,7 @@ import project_sim as sim
 
 
 def test_simple_test():
-    project = sim.Project("test project")
+    project = sim.Project("Simple Project")
 
     project.staff(
         [
@@ -28,7 +28,7 @@ def test_simple_test():
 
 # task requiring > 1 capability
 def test_multi_dependency_task():
-    project = sim.Project("test project")
+    project = sim.Project("Project with multi-dependency task")
 
     project.staff(
         [
@@ -52,7 +52,7 @@ def test_multi_dependency_task():
 
 # missing capabilities (graceful project failure)
 def test_no_capabilities_for_task():
-    project = sim.Project("test project")
+    project = sim.Project("Project we don't have a capability to complete")
 
     project.staff(
         [
@@ -76,7 +76,7 @@ def test_no_capabilities_for_task():
 
 # task dependencies
 def test_task_dependencies():
-    project = sim.Project("test project")
+    project = sim.Project("Project with task dependencies")
 
     project.staff(
         [
