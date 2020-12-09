@@ -119,30 +119,39 @@ class Project:
         self.log(f"Finished simulation in {self.env.now} time units!")
 
         # progress bar gantt
-        max_desc = 20
+        max_desc = 25
+        max_suffix = 5
         max_bar = self.env.now
         for t in self.tasks:
-            t_desc = t.name
-            if len(t_desc) >= max_desc:
-                t_desc = t_desc[: (max_desc - 3 - len(t_desc))] + "..."
-            else:
-                t_desc = t_desc.ljust(max_desc)
-            with trange(100) as p:
-                max_bar_screen = p.ncols - max_desc - 7
-                p.set_description(f"{t_desc}", False)
-                bf = (
-                    "{desc:"
-                    + f"<{max_desc}"
-                    + "}|{bar:"
-                    + f"{int(t.completed*max_bar_screen/max_bar)}"
-                    + "}|"
-                    + f"{t.completed}"
-                )
-                p.bar_format = bf
-                for i in p:
-                    sleep(self.speed)
             if not t.finished():
                 self.log(f'    FAIL: Task "{t.name}" could not be completed!')
+            else:
+                t_desc = t.completed_by.name + " - " + t.name
+                if len(t_desc) > max_desc:
+                    t_desc = t_desc[: (max_desc - 3 - len(t_desc))] + "..."
+                else:
+                    t_desc = t_desc.ljust(max_desc)
+                t_suffix = f"{t.started},{t.completed}"
+                if len(t_suffix) > max_suffix:
+                    t_suffix = t_suffix[: (max_suffix - 3 - len(t_suffix))] + "..."
+                else:
+                    t_suffix = t_suffix.rjust(max_suffix)
+
+                with trange(100) as p:
+                    max_bar_screen = p.ncols - max_desc - max_suffix
+                    p.set_description(f"{t_desc}", False)
+                    t_leader = int((t.started) * max_bar_screen / max_bar)
+                    t_trailer = int((max_bar - t.completed) * max_bar_screen / max_bar)
+                    bf = (
+                        f"{t_desc}"
+                        + " " * t_leader
+                        + "|{bar}|"
+                        + " " * t_trailer
+                        + f"{t_suffix}"
+                    )
+                    p.bar_format = bf
+                    for i in p:
+                        sleep(self.speed)
 
     def use_resource(self, task, person):
         # generate a resource request (get in queue)
